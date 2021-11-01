@@ -1,7 +1,7 @@
-// Code your design here
-
+//contains ALU, CU, REG_MEM, SIMPLE_CPU(TOP)
 `timescale 1ns / 1ps
 
+//******************* ALU *********************
 module alu( clk, operand_a, operand_b, opcode, result); //this is the alu, all it does is + and - two values
     parameter DATA_WIDTH = 8;
 
@@ -13,15 +13,12 @@ module alu( clk, operand_a, operand_b, opcode, result); //this is the alu, all i
     
   always@(posedge clk)
     begin
-          //$display("opp a %d",operand_a);
      case(opcode)
         4'b0000: begin //Addition
            result <= operand_a + operand_b ; 
-          $display("opp add; a %d, b %d",operand_a,operand_b);
         end
         4'b0001: begin //Subtraction 
            result <= operand_a - operand_b;
-          $display("opp sub; a %d, b %d",operand_a,operand_b);
         end
         default: result <= 8'bx; 
      endcase
@@ -29,7 +26,8 @@ module alu( clk, operand_a, operand_b, opcode, result); //this is the alu, all i
     end
 endmodule
 
-module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, sel3,w_r); //regfile); // tried to add at end for portmapping
+//******************* CU *********************
+module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, sel3,w_r);
     //Defaults unless overwritten during instantiation
     parameter DATA_WIDTH = 8; //8 bit wide data
     parameter ADDR_BITS = 5; //32 Addresses
@@ -37,7 +35,7 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
     //INPUTS
     input clk,rst;
     input [INSTR_WIDTH-1:0]instr;
-  	input [DATA_WIDTH-1:0] result2; //output of alu, offset if sel1=1 and sel3=1
+  	input [DATA_WIDTH-1:0] result2; //output of alu
 
     //OUTPUTS
     output reg [DATA_WIDTH-1:0] operand1;
@@ -45,10 +43,15 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
     output reg [DATA_WIDTH-1:0] offset;
     output reg [3:0] opcode;
     output reg sel1, sel3, w_r;
+  
+  	//my way of trying to get EPWave to show, since EDA cant pass arrays into epwave like vivado
+  	output reg [DATA_WIDTH-1:0] regfile_0; 
+  	output reg [DATA_WIDTH-1:0] regfile_1; 
+  	output reg [DATA_WIDTH-1:0] regfile_2; 
+  	output reg [DATA_WIDTH-1:0] regfile_3; 
 
     //REGISTER FILE: CU internal register file of 4 registers.  This is a over simplication of a real solution
-  	reg [DATA_WIDTH-1:0] regfile [0:3]; //depth 4 array, represents memory.
-	//input [DATA_WIDTH-1:0] regfile [0:3];
+  	reg [DATA_WIDTH-1:0] regfile[0:3];
     reg [INSTR_WIDTH-1:0]instruction;
     
     //STATES
@@ -63,9 +66,14 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
     
     always @(posedge clk) begin
         instruction = instr;
+      //this will appear a lot.
+      //assigns each element of the array to a output register so you can view the array
+      regfile_0 <= regfile[0]; 
+      regfile_1 <= regfile[1];
+      regfile_2 <= regfile[2];  
+      regfile_3 <= regfile[3]; 
         case (state)
             RESET : begin //#0
-              $display("in state RESET");
                 if (instruction[19:18] == 2'b00)  begin
                     state = RESET; 
                     end else begin
@@ -75,7 +83,7 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                 //Write initial values to regfile
                 regfile[0]<= 8'd0;
                 regfile[1]<= 8'd1;
-                regfile[2]<= 8'd2;
+              	regfile[2]<= 8'd2;
                 regfile[3]<= 8'd3;
 
                 //Set output reset defaults
@@ -90,7 +98,6 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
             end
 
             DECODE : begin //#1
-              $display("in state DECODE");
                 state = EXECUTE; //#2
                 if (instruction[19:18] == 2'b1) begin //std_op
                     operand1 <= regfile[instruction[15:14]]; //X2
@@ -100,6 +107,13 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                    sel1 <= 1;
                     sel3 <= 0;
                     w_r <= 0;
+                  	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------
                 end else if (instruction[19:18] == 2'b10) begin //loadR 
                     operand1 <= regfile[instruction[15:14]]; //X2
                   	operand2 <= regfile[instruction[17:16]]; //z offset?
@@ -108,24 +122,38 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                     sel1 <= 0; //pass data_out
                     sel3 <= 1; //pass offset
                     w_r <= 0;
+                  	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------ 
                 end else if (instruction[19:18] == 2'b11) begin //storeR 
                    /******************************************** 
                    *
                    * FILL IN CORRECT CODE HERE
                    *
                    ********************************************/ 
+                  	
                   	operand1 <= regfile[instruction[15:14]]; //X2
                     operand2 <= regfile[instruction[17:16]]; //z
                   	offset <= instruction[11:4];
                     opcode <= instruction[3:0];
                  	sel1 <= 1; //pass offset
                     sel3 <= 1; //pass offset
-                    w_r <= 1; //wen
+                    w_r <= 0; //wen
+                  	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------
 
                 end
             end
             EXECUTE: begin //#2
-              $display("in state EXECUTE");
                 state = MEM_ACCESS; //#3
                 if (instruction[19:18] == 2'b01) begin //std_op
                     state = WRITE_BACK;
@@ -136,6 +164,13 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                     sel1 <= 1;
                     sel3 <= 0;
                     w_r <= 0; //wen?
+                 	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------
 
                 end else if (instruction[19:18] == 2'b10) begin //loadR  
                   operand1 <= regfile[instruction[15:14]]; //X2 (offset?)
@@ -145,23 +180,37 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                     sel1 <= 0; //pass data_out
                     sel3 <= 1; //pass offset
                     w_r <= 0; //wen
+                 	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------ 
                 end else if (instruction[19:18] == 2'b11) begin //storeR
                    /******************************************** 
                    *
                    * FILL IN CORRECT CODE HERE
                    *
                    ********************************************/ 
+                  	
                   	operand1 <= regfile[instruction[15:14]]; //X2
                     operand2 <= regfile[instruction[17:16]]; //z
                   	offset <= instruction[11:4];
                     opcode <= instruction[3:0];
                   	sel1 <= 1; //pass offset
                     sel3 <= 1; //pass offset
-                    w_r <= 1; //wen
+                    w_r <= 0; //wen
+                 	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------ 
                 end
             end
             MEM_ACCESS: begin //#3
-              $display("in state MEM_ACCESS");
                 state = WRITE_BACK; //#4
                 if (instruction[19:18] == 2'b10) begin //loadR             
                     operand1 <= regfile[instruction[15:14]]; //X2
@@ -171,6 +220,13 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                     sel1 <= 0; //pass data_out
                     sel3 <= 1; //pass offset
                     w_r <= 0; //wen
+                 	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------ 
                 end else if (instruction[19:18] == 2'b11) begin //storeR 
                    /******************************************** 
                    *
@@ -179,19 +235,24 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                    * the FSM
                    *
                    ********************************************/ 
-                  	state = DECODE; //switch
-                  
+                  	state = DECODE; //state switch for '11
                   	operand1 <= regfile[instruction[15:14]]; //X2
                     operand2 <= regfile[instruction[17:16]]; //z
                   	offset <= instruction[11:4];
                     opcode <= instruction[3:0];
                   	sel1 <= 1; //pass offset
-                    sel3 <= 1; //pass offset
+                    sel3 <= 0; //pass offset
                     w_r <= 1; //wen
+                 	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------ 
                 end
             end
             WRITE_BACK: begin //#4
-              $display("in state WRITEBACK");
                 state = DECODE; //#1
                 if (instruction[19:18] == 2'b01) begin //std_op
                     regfile[instruction[17:16]] <= result2; //X1
@@ -199,28 +260,40 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                     operand2 <= regfile[instruction[13:12]]; //X3
                     offset <= instruction[11:4];
                     opcode <= instruction[3:0];
-                    sel1 <= 1; //pass result?
-                    sel3 <= 0; //pass operand2?
-                    w_r <= 0; //wen?
+                    sel1 <= 1; //pass result
+                    sel3 <= 0; //pass operand2
+                    w_r <= 0; //wen
+                 	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------
                 end else if (instruction[19:18] == 2'b11) begin //storeR 
                    /******************************************** 
                    *
                    * FILL IN CORRECT CODE HERE
-                   * technically this isnt supposed to be here, never runs?
+                   * technically this isnt supposed to be here, never runs.
+                   * still made it anyway since you said i have to.
                    ********************************************/ 
                   	operand1 <= regfile[instruction[15:14]]; //X2
                     operand2 <= regfile[instruction[17:16]]; //z
                   	offset <= instruction[11:4];
                     opcode <= instruction[3:0];
-                  	sel1 <= 1; //pass offset
+                  	sel1 <= 1; //pass result
                     sel3 <= 1; //pass offset
                     w_r <= 1; //wen
-                    
-                 	//x1 = operand2
-        			//x2 = result1 which is = result2 when sel1 = 1
+                 	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------
                   
                 end else if (instruction[19:18] == 2'b10) begin //loadR
-                  //regfile[instruction[17:16]] <= result2; //From data mem
+                    regfile[instruction[17:16]] <= result2; //From data mem
                     operand1 <= regfile[instruction[15:14]]; //X2
                     operand2 <= regfile[instruction[17:16]]; //z
                     offset <= instruction[11:4];
@@ -228,6 +301,13 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
                     sel1 <= 0; //pass data_out
                     sel3 <= 1; //pass offset
                     w_r <= 0; //wen
+                  	//------------
+                  	//assigns each element of the array to a output register so you can view the array
+                 	regfile_0 = regfile[0]; 
+      				regfile_1 = regfile[1];
+      				regfile_2 = regfile[2];  
+      				regfile_3 = regfile[3]; 
+                  	//------------
                 end
             end
 
@@ -237,6 +317,7 @@ module CU (clk,rst, instr, result2, operand1, operand2, offset, opcode, sel1, se
     end
 endmodule
 
+//******************* Register Memory *********************
 module reg_mem (addr, data_in, wen, clk, data_out);
 
     parameter DATA_WIDTH = 8; //8 bit wide data
@@ -258,7 +339,6 @@ module reg_mem (addr, data_in, wen, clk, data_out);
         if (wen) begin //Write
             mem_array [addr] <= data_in;
             data_out <= #(DATA_WIDTH)'b0;
-          $display("writing: %d to address %d",data_in,addr);
         end
 
         else begin //Read
@@ -268,6 +348,8 @@ module reg_mem (addr, data_in, wen, clk, data_out);
 
 endmodule
 
+
+//******************* Simple CPU (TOP) *********************
 module simple_cpu( clk, rst, instruction );
 
     parameter DATA_WIDTH = 8; //8 bit wide data
@@ -292,27 +374,22 @@ module simple_cpu( clk, rst, instruction );
     wire sel1_i, sel3_i;
     wire [DATA_WIDTH-1:0] operand_1_i, operand_2_i;
 
-    // wire [DATA_WIDTH-1:0] regfile_i [0:3]; //--------------------------------created here for epwave
+    //wire [DATA_WIDTH-1:0] regfile_i [0:3];
     
     //Instantiating an alu1
     alu #(DATA_WIDTH) alu1 (clk, operand_a_i, operand_b_i, opcode_i, result1_i);
      
     //instantiation of data memory
     reg_mem  #(DATA_WIDTH,ADDR_BITS) data_memory(result1_i, data_in_i, wen_i, clk, data_out_i);
-    /*my notes:
-  		result1 is the address in memory to fetch/write to
-        data_in is what to write to that address if wen=1
-        
-        
-        data_in is operand2
-        x1 = operand2
-        x2 = result1
-  	*/
+    
     //Instantiation of a CU
     CU  #(DATA_WIDTH,ADDR_BITS, INSTR_WIDTH) CU1(clk, rst, instruction, result2_i,
-        operand_1_i, operand_2_i, offset_i, opcode_i, sel1_i, sel3_i, wen_i);// ,regfile_i); //---------------added at the end here to pass to CU module
+        operand_1_i, operand_2_i, offset_i, opcode_i, sel1_i, sel3_i, wen_i);
     
-
+	/*my pesonal notes:
+  		result1 is the address in memory to fetch/write to
+        data_in is what to write to that address if wen=1
+  	*/
     
     //Connect CU to ALU
     assign operand_a_i = operand_1_i;
@@ -325,25 +402,4 @@ module simple_cpu( clk, rst, instruction );
     //Connect datamem to CU
     assign result2_i = (sel1_i == 0) ? data_out_i : (sel1_i == 1) ? result1_i : 8'bx;  
     
-
-    
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 endmodule
